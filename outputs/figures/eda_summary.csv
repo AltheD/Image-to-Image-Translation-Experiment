@@ -1,0 +1,3 @@
+split,count,sizes_top3,photo_modes,label_modes,timestamp
+train,2975,"[((256, 256), 2975)]",{'RGB': 2975},{'RGB': 2975},2025-12-15T21:59:04
+val,500,"[((256, 256), 500)]",{'RGB': 500},{'RGB': 500},2025-12-15T21:59:04
