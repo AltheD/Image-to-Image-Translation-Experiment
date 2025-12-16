@@ -73,25 +73,42 @@ def build_transform(
     def _transform(label: Image.Image, photo: Image.Image):
         # 同步 resize/jitter
         if jitter:
-            target_resize = 286
+            base_size = 286
+            target_resize = base_size
             # 额外随机缩放（在 jitter 前进行）
             if scale_range is not None:
                 scale = random.uniform(scale_range[0], scale_range[1])
-                target_resize = int(target_resize * scale)
+                target_resize = int(base_size * scale)
 
+            # 先缩放到 target_resize，之后再根据需要裁剪/补缩放回 image_size
             label = F.resize(label, target_resize, interpolation=transforms.InterpolationMode.BICUBIC)
             photo = F.resize(photo, target_resize, interpolation=transforms.InterpolationMode.BICUBIC)
-            label, photo = _random_crop_pair(label, photo, image_size)
+
+            # 避免 target_resize < image_size 时随机裁剪报错
+            crop_size = min(image_size, target_resize)
+            label, photo = _random_crop_pair(label, photo, crop_size)
+
+            # 若 crop_size 小于期望的 image_size，则再统一放缩到 image_size
+            if crop_size != image_size:
+                label = F.resize(label, image_size, interpolation=transforms.InterpolationMode.BICUBIC)
+                photo = F.resize(photo, image_size, interpolation=transforms.InterpolationMode.BICUBIC)
         else:
             target_resize = image_size
             if scale_range is not None:
                 scale = random.uniform(scale_range[0], scale_range[1])
-                target_resize = int(target_resize * scale)
+                target_resize = int(image_size * scale)
 
             label = F.resize(label, target_resize, interpolation=transforms.InterpolationMode.BICUBIC)
             photo = F.resize(photo, target_resize, interpolation=transforms.InterpolationMode.BICUBIC)
-            # 统一裁到 image_size（保证输出尺寸一致）
-            label, photo = _random_crop_pair(label, photo, image_size)
+
+            # 裁剪尺寸不能超过当前图像尺寸
+            crop_size = min(image_size, target_resize)
+            label, photo = _random_crop_pair(label, photo, crop_size)
+
+            # 若裁剪结果尺寸小于 image_size，再放缩到统一尺寸
+            if crop_size != image_size:
+                label = F.resize(label, image_size, interpolation=transforms.InterpolationMode.BICUBIC)
+                photo = F.resize(photo, image_size, interpolation=transforms.InterpolationMode.BICUBIC)
 
         # 同步水平翻转
         if horizontal_flip and random.random() < 0.5:
