@@ -72,11 +72,11 @@ class UNetBaseline(nn.Module):
         # C512
         self.down7 = UNetBlock(512, 512, down=True)
         # C512 (最底层，无下采样，直接卷积)
+        # 注意：此层输出空间尺寸为 1×1，BatchNorm/InstanceNorm 在训练模式下会因为
+        # “每通道/每实例只有 1 个元素” 报错，因此这里不做归一化，只使用 Conv + 激活。
         self.down8 = nn.Sequential(
             nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1, bias=False),
-            # BatchNorm 在 1×1 空间尺寸 + batch_size=1 时会报错，改用 InstanceNorm
-            nn.InstanceNorm2d(512, affine=True, track_running_stats=False),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(0.2, inplace=True),
         )
         
         # 解码器（上采样，带skip connections）
