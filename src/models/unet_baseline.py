@@ -74,7 +74,8 @@ class UNetBaseline(nn.Module):
         # C512 (最底层，无下采样，直接卷积)
         self.down8 = nn.Sequential(
             nn.Conv2d(512, 512, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(512),
+            # BatchNorm 在 1×1 空间尺寸 + batch_size=1 时会报错，改用 InstanceNorm
+            nn.InstanceNorm2d(512, affine=True, track_running_stats=False),
             nn.LeakyReLU(0.2, inplace=True)
         )
         
